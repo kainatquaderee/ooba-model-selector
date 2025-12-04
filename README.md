@@ -23,4 +23,4 @@ A lightweight SillyTavern extension that adds a draggable UI panel to load Ooba-
 
 ```bash
 cd path/to/sillytavern/scripts/extensions/third-party/
-git clone https://github.com/<your-username>/ooba-model-selector.git
+git clone https://github.com/kainatquaderee/ooba-model-selector
