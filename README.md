@@ -1,26 +1,33 @@
-# Ooba Model Selector - SillyTavern Extension
+# SillyTavern Extension Example
 
-A lightweight SillyTavern extension that adds a draggable UI panel to load Ooba-style models via a local backend and provides convenient slash commands for loading models and toggling the panel.
-
----
+*Provide a brief description of how your extension works, what problem it aims to solve.*
 
 ## Features
 
-- Draggable, resizable UI panel for model management
-- Enter model name manually and send load request to your Ooba backend
-- Save last-used model and base URL in persistent settings
-- Slash commands for quick model loading:
-  - `/obamodel "model-name"` — load a specific model
-  - `/hide-obba-loader` — toggle (hide/show) the draggable panel
-  - `/toggle-obamodel` — alias for `/hide-obba-loader`
-- Status updates and notifications via **toastr**
+*Describe some of the main selling points of your extension.*
 
----
+## Installation and Usage
 
-## Installation
+### Installation
 
-1. **Clone the extension repository** into your SillyTavern `scripts/extensions/third-party/` folder:
+*In most cases, this should just be using ST's inbuilt extension installer.* 
 
-```bash
-cd path/to/sillytavern/scripts/extensions/third-party/
-git clone https://github.com/<your-username>/ooba-model-selector.git
+### Usage
+
+*Explain how to use this extension.*
+
+## Prerequisites
+
+*Specify the version of ST necessary here.*
+
+## Support and Contributions
+
+*Where should someone ask for support?*
+
+*Consider including your own contact info for help/questions.*
+
+*How can people help add to this extension?*
+
+## License
+
+*Be cool, use an open source license.*
