@@ -1,5 +1,9 @@
 import { extension_settings } from "../../../extensions.js";
 import { saveSettingsDebounced } from "../../../../script.js";
+import { registerSlashCommand } from '../../../slash-commands.js';
+import { SlashCommand } from  "../../../slash-commands/SlashCommand.js";
+import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
+import { ARGUMENT_TYPE,SlashCommandArgument } from "../../../slash-commands/SlashCommandArgument.js"
 
 const extensionName = "ooba-model-selector";
 const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
@@ -23,7 +27,40 @@ function getBaseUrl() {
 
 
 // --- Slash Command Registration ---
+//get oba model.
 
+//uncomment those imports if not added already
+//import { extension_settings } from "../../../extensions.js";
+//import { saveSettingsDebounced } from "../../../../script.js";
+//import { registerSlashCommand } from '../../../slash-commands.js';
+//import { SlashCommand } from  "../../../slash-commands/SlashCommand.js";
+//import { SlashCommandParser } from "../../../slash-commands/SlashCommandParser.js";
+//import { ARGUMENT_TYPE,SlashCommandArgument } from "../../../slash-commands/SlashCommandArgument.js"
+
+SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'get-oba-model',
+    callback: callback_getModelName, //or to a function name
+    aliases: [''], //command similer
+    returns: 'current model name', //what it returns
+    namedArgumentList: [],
+    unnamedArgumentList: [],
+    helpString: `
+        <div>
+           "".
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code class="language-stscript">"/get-oba-model"</code></pre>
+                    returns ""
+                </li>
+                <li>
+                    <pre><code class="language-stscript"></code></pre>
+                </li>
+            </ul>
+        </div>
+    `,
+}));
 // ensure panelVisible is tracked in settings (add to defaultSettings if not already)
 defaultSettings.panelVisible = defaultSettings.panelVisible ?? true;
 
@@ -74,11 +111,44 @@ registerSlashCommand(
   true
 );
 
-import { registerSlashCommand } from '../../../slash-commands.js';
+
+SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'obamodel',
+    callback: postLoad,
+    aliases: [''],
+    returns: '',
+    namedArgumentList: [],
+    unnamedArgumentList: [
+        SlashCommandArgument.fromProps({ description: 'model name',
+            typeList: ARGUMENT_TYPE.STRING,
+            isRequired: true,
+        }),
+    ],
+    helpString: `
+        <div>
+           loads oba model
+        </div>
+        <div>
+            <strong>Example:</strong>
+            <ul>
+                <li>
+                    <pre><code class="language-stscript">/obamodel "RP-king-12b-II.Q3_K_L.gguf"</code></pre>
+                    returns ""
+                </li>
+                <li>
+                    <pre><code class="language-stscript"></code></pre>
+                    returns ""
+                </li>
+            </ul>
+        </div>
+    `,
+}));
+/*
 registerSlashCommand(
     'obamodel',
     async (modelName) => {
         if (!modelName) return '❌ Please provide a model name';
+        modelName = modelName;
+        toastr.info(`modelname: ${modelName}`);
         try {
             // save last used
             extension_settings[extensionName].lastModel = modelName;
@@ -88,7 +158,7 @@ registerSlashCommand(
             saveSettingsDebounced();
 
             // call your loader
-            await postLoad(modelName);
+            await postLoad(modelName.toString);
 
             return `Attempted to load model: ${modelName}`;
         } catch (err) {
@@ -100,10 +170,71 @@ registerSlashCommand(
     'Load a model by name, e.g. /obamodel "mistral-7b-q4f"',
     true, // unnamed argument is required
     true  // show in help
+);*/
+
+registerSlashCommand(
+    'unload_obamodel',
+    async (modelName) => {
+        try {
+            await unload();
+
+            return `Attempted to unload model:`;
+        } catch (err) {
+            console.error('obamodel command error:', err);
+            return `Error loading model: ${err?.message ?? err}`;
+        }
+    },
+    [], // args
+    'unLoad obamodel"',
+    false, // unnamed argument is required
+    true  // show in help
 );
 
 
-async function postLoad(modelName) {
+async function unload() {
+    const base = getBaseUrl();
+    const url= `${base}/v1/internal/model/unload`;
+  $("#ooba-status").text(`unloading_model...`);
+  try {
+      const res = await fetch(url, {
+          method: "POST",
+          headers: {
+              "accept": "application/json"
+        },
+        body: ""
+      });
+   const txt = await res.text();
+    if (!res.ok) {
+      console.error("unLoad failed:", res.status, txt);
+      $("#ooba-status").text(`unLoad failed: ${res.status} ${res.statusText}`);
+      toastr.error(`unLoad failed (${res.status}) — see console`, "Ooba Model Loader");
+      return;
+    }
+     $("#ooba-status").text(`unLoad request sent — server responded OK.`);
+    toastr.success(`unLoad request sent`, "Ooba Model Loader");
+    console.log("unload response:", txt);
+  } catch (err) {
+    console.error("postLoad error:", err);
+    $("#ooba-status").text(`Failed to send request: ${err.message}`);
+    toastr.error("Network error — check CORS / server", "Ooba Model Loader");
+  }
+}
+
+
+// Fetch model name from Ollama-compatible backend
+async function callback_getModelName() {
+  const baseUrl = getBaseUrl();
+  const response = await fetch(`${baseUrl}/v1/internal/model/info`);
+  if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+  const data = await response.json();
+  return data.model_name; // Returns: "None"
+}
+
+// Usage example:
+// const modelName = await getModelName();
+// console.log("Active model:", modelName);
+
+async function postLoad(args,modelName) {
   if (!modelName || !modelName.trim()) {
     toastr.error("Please enter a model name.", "Ooba Model Loader");
     return;
@@ -145,86 +276,3 @@ async function postLoad(modelName) {
     toastr.error("Network error — check CORS / server", "Ooba Model Loader");
   }
 }
-
-function makeDraggable() {
-  let dragging = false;
-  let offsetX = 0, offsetY = 0;
-  const $deck = $("#ooba-deck");
-  const $hdr = $("#ooba-deck-header");
-
-  $hdr.on("mousedown", function (e) {
-    dragging = true;
-    const pos = $deck.offset();
-    offsetX = e.pageX - pos.left;
-    offsetY = e.pageY - pos.top;
-    $("body").css("user-select", "none");
-  });
-
-  $(document).on("mousemove", function (e) {
-    if (!dragging) return;
-    $deck.css({
-      left: Math.max(6, e.pageX - offsetX),
-      top: Math.max(6, e.pageY - offsetY),
-      right: "auto"
-    });
-  });
-
-  $(document).on("mouseup", function () {
-    if (dragging) {
-      dragging = false;
-      $("body").css("user-select", "");
-    }
-  });
-}
-
-jQuery(async () => {
-  ensureSettings();
-
-  // load the HTML UI from example.html (same folder)
-  const html = await $.get(`${extensionFolderPath}/example.html`);
-  $("body").append(html);
-    // apply saved visibility state
-    if (extension_settings[extensionName].panelVisible === false) {
-      $("#ooba-deck").hide();
-    } else {
-      $("#ooba-deck").show();
-    }
-  // init draggable
-  makeDraggable();
-
-  // fill inputs from saved settings
-  $("#ooba-model-input").val(extension_settings[extensionName].lastModel || "");
-  $("#ooba-baseurl").val(extension_settings[extensionName].baseUrl || defaultSettings.baseUrl);
-
-  // load button
-  $("#ooba-load-btn").on("click", function () {
-    const model = $("#ooba-model-input").val().trim();
-    extension_settings[extensionName].lastModel = model;
-    saveSettingsDebounced();
-    postLoad(model);
-  });
-
-  // save base URL when changed
-  $("#ooba-baseurl").on("change input", function () {
-    const v = $("#ooba-baseurl").val().trim() || defaultSettings.baseUrl;
-    extension_settings[extensionName].baseUrl = v;
-    saveSettingsDebounced();
-  });
-
-  // convenience: press Enter in model input -> load
-  $("#ooba-model-input").on("keypress", function (e) {
-    if (e.which === 13) { // Enter
-      $("#ooba-load-btn").click();
-      return false;
-    }
-  });
-
-  // refresh button simply clears status and re-fills input from saved value
-  $("#ooba-refresh-btn").on("click", function () {
-    $("#ooba-status").text("");
-    $("#ooba-model-input").val(extension_settings[extensionName].lastModel || "");
-    toastr.info("Input refreshed from saved settings", "Ooba Model Loader");
-  });
-});
-
-
